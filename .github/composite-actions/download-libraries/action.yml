@@ -15,20 +15,34 @@ runs:
   using: 'composite'
   steps:
     - uses: actions/checkout@v3
+    - name: Make lib directory
+      run: |
+        mkdir -p lib
+      shell: bash
+
     - name: Install build tools
       run: |
         sudo apt-get update -y
         sudo apt-get install gcc-10 g++-10 cmake build-essential -y
       shell: bash
 
-    - name: Install Boost
-      run: sudo apt-get install libboost-all-dev -y
-      shell: bash
+    - name: Cache Boost
+      uses: actions/cache@v3
+      id: cache-boost
+      with:
+        path: /usr/local
+        key: ${{ runner.os }}-boost-global-78
 
-    - name: Make lib directory
+    - name: Download and compile Boost
       run: |
-        mkdir -p lib
+        cd lib
+        wget -O boost_1_78_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.tar.gz/download
+        tar xzf boost_1_78_0.tar.gz
+        cd boost_1_78_0
+        sudo ./bootstrap.sh --prefix=/usr/local > /dev/null
+        sudo ./b2 install --prefix=/usr/local > /dev/null
       shell: bash
+      if: steps.cache-boost.outputs.cache-hit != 'true'
 
     - name: Download googletest
       uses: ./.github/composite-actions/download-library
